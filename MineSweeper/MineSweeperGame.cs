@@ -3,11 +3,11 @@ using System.Collections.Generic;
 
 namespace MineSweeper;
 
-public class MineSweeper
+public class MineSweeperGame
 {
     # region Constants
 
-    private enum CellState
+    public enum CellState
     {
         Hidden,
         Flagged,
@@ -40,13 +40,13 @@ public class MineSweeper
             Height = height;
             Mines = mines;
         }
-
-        public static readonly Difficulty Easy = new Difficulty(9, 9, 10);
-        public static readonly Difficulty Medium = new Difficulty(16, 16, 40);
-        public static readonly Difficulty Hard = new Difficulty(30, 16, 99);
     }
 
-    private class Cell
+    public static readonly Difficulty Easy = new Difficulty(9, 9, 10);
+    public static readonly Difficulty Medium = new Difficulty(16, 16, 40);
+    public static readonly Difficulty Hard = new Difficulty(30, 16, 99);
+
+    public class Cell
     {
         public CellState State { get; set; }
         public CellContent Content { get; set; }
@@ -63,11 +63,18 @@ public class MineSweeper
 
     private readonly Cell[,] _board;
 
+    public int Width => _board.GetLength(0);
+    public int Height => _board.GetLength(1);
+    public Difficulty DifficultyProperty { get; } // Named to avoid conflict with the Difficulty enum
+    public Cell this[int x, int y] => _board[x, y];
     public int Remaining { get; private set; }
+    public bool Started { get; private set; }
 
-    public MineSweeper(Difficulty difficulty, int clickX, int clickY)
+    public MineSweeperGame(Difficulty difficulty)
     {
+        DifficultyProperty = difficulty;
         _board = new Cell[difficulty.Width, difficulty.Height];
+
         Remaining = difficulty.Width * difficulty.Height - difficulty.Mines;
 
         // Initialize the board
@@ -78,15 +85,20 @@ public class MineSweeper
                 State = CellState.Hidden,
                 Content = CellContent.Empty
             };
+    }
 
+    public void Start(int clickX, int clickY)
+    {
         // Place mines
-        PlaceMines(difficulty.Mines, clickX, clickY);
+        PlaceMines(DifficultyProperty.Mines, clickX, clickY);
 
         // Calculate numbers
         CalculateNumbers();
 
         // Reveal the cell the user clicked
         Reveal(clickX, clickY, out _);
+
+        Started = true;
     }
 
     private void PlaceMines(int mineCount, int clickX, int clickY)
@@ -123,7 +135,7 @@ public class MineSweeper
     {
         for (var x = 0; x < _board.GetLength(0); x++)
         {
-            for (var y = 0; y < _board.GetLength(1); x++)
+            for (var y = 0; y < _board.GetLength(1); y++)
             {
                 if (_board[x, y].Content != CellContent.Mine)
                     continue;
@@ -135,7 +147,8 @@ public class MineSweeper
                         y + dy < 0 || y + dy >= _board.GetLength(1))
                         continue;
 
-                    _board[x + dx, y + dy].Content++;
+                    if (_board[x + dx, y + dy].Content != CellContent.Mine)
+                        _board[x + dx, y + dy].Content++;
                 }
             }
         }
@@ -143,10 +156,18 @@ public class MineSweeper
 
     public void Reveal(int x, int y, out bool gameOver)
     {
+        // Check if the coordinates are valid (not guaranteed because of recursion)
+        if (x < 0 || x >= _board.GetLength(0) ||
+            y < 0 || y >= _board.GetLength(1))
+        {
+            gameOver = false;
+            return;
+        }
+
         var cell = _board[x, y];
 
         gameOver = cell.Content == CellContent.Mine && cell.State != CellState.Flagged;
-        
+
         // If the cell is already revealed or flagged, don't do anything
         if (cell.State is CellState.Revealed or CellState.Flagged)
             return;
