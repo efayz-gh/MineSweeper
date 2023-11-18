@@ -67,7 +67,7 @@ public class MineSweeperGame
     public int Height => _board.GetLength(1);
     public Difficulty DifficultyProperty { get; } // Named to avoid conflict with the Difficulty enum
     public Cell this[int x, int y] => _board[x, y];
-    public int Remaining { get; private set; }
+    public int TilesRemaining { get; private set; }
     public bool Started { get; private set; }
 
     public MineSweeperGame(Difficulty difficulty)
@@ -75,7 +75,7 @@ public class MineSweeperGame
         DifficultyProperty = difficulty;
         _board = new Cell[difficulty.Width, difficulty.Height];
 
-        Remaining = difficulty.Width * difficulty.Height - difficulty.Mines;
+        TilesRemaining = difficulty.Width * difficulty.Height - difficulty.Mines;
 
         // Initialize the board
         for (var x = 0; x < difficulty.Width; x++)
@@ -173,7 +173,7 @@ public class MineSweeperGame
             return;
 
         cell.State = CellState.Revealed;
-        Remaining--;
+        TilesRemaining--;
 
         if (cell.Content != CellContent.Empty)
             return;
@@ -192,5 +192,13 @@ public class MineSweeperGame
             return;
 
         cell.State = cell.State == CellState.Flagged ? CellState.Hidden : CellState.Flagged;
+    }
+    
+    public void RevealMines()
+    {
+        for (var x = 0; x < _board.GetLength(0); x++)
+        for (var y = 0; y < _board.GetLength(1); y++)
+            if (_board[x, y].Content == CellContent.Mine)
+                _board[x, y].State = CellState.Revealed;
     }
 }
